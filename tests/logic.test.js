@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {units,lessons,allWords} from '../src/data.js';
+import {initialState,loadState,saveState,isUnlocked,nextLesson,completeLesson,streak,makeQuestions} from '../src/logic.js';
+test('course has unique lessons and complete vocabulary',()=>{assert.equal(units.length,4);assert.equal(lessons.length,12);assert.equal(new Set(lessons.map(l=>l.id)).size,12);assert.equal(allWords.length,48);for(const lesson of lessons){assert.equal(lesson.words.length,4);assert.equal(new Set(lesson.words.map(w=>w[1])).size,4)}});
+test('lessons unlock in order and replay awards points without duplicating completion',()=>{const state=initialState();assert.equal(isUnlocked(lessons[1].id,state.completed),false);assert.equal(completeLesson(state,lessons[1].id,'2026-01-01'),false);assert.equal(completeLesson(state,lessons[0].id,'2026-01-01'),true);assert.equal(isUnlocked(lessons[1].id,state.completed),true);completeLesson(state,lessons[0].id,'2026-01-01');assert.equal(state.xp,20);assert.equal(state.completed.length,1);assert.equal(state.dailyCounts['2026-01-01'],2);assert.equal(nextLesson(state.completed).id,lessons[1].id)});
+test('full completion has no next lesson',()=>assert.equal(nextLesson(lessons.map(l=>l.id)),null));
+test('streak includes today or yesterday but not older gaps',()=>{let d=new Date(2026,0,4,12);assert.equal(streak(['2026-01-02','2026-01-03'],d),2);assert.equal(streak(['2026-01-01','2026-01-02'],d),0);assert.equal(streak(['2026-01-03','2026-01-04'],d),2)});
+test('each question includes its correct answer and distinct options',()=>{for(const l of lessons)for(const q of makeQuestions(l)){assert.equal(q.options.length,4);assert.equal(new Set(q.options).size,4);assert.ok(q.options.includes(q.persian))}});
+test('storage round trip and corrupt data fallback',()=>{let value;const storage={getItem:()=>value,setItem:(_k,v)=>value=v};const s=initialState();s.xp=10;saveState(storage,s);assert.equal(loadState(storage).xp,10);value='{';assert.deepEqual(loadState(storage),initialState());value='null';assert.deepEqual(loadState(storage),initialState())});
