@@ -2,3 +2,5 @@ node_modules/
 android/build/
 *.jks
 *.keystore
+
+artifacts/
